@@ -46,6 +46,7 @@ striveCharacters = {
     'may':'May',
     'zato-1':'Zato-1', 
     'zato':'Zato-1', # Name variation
+    'zato1':'Zato-1', # Name variation
     'millia':'Millia_Rage',
     'leo':'Leo_Whitefang',
     'ramlethal':'Ramlethal_Valentine', 
@@ -71,13 +72,20 @@ footer = {
     'Ky_Kiske':'Damage Values in [] are during Shock State',
     'Zato-1':'Input Value in ][ notate on button release',
     'Axl_Low':'Damage value in [] refers to max range'
-
 }
 
+### Headers
+# System Data
+striveCharacterTableHeader = ['Name','Defense','Guts','Prejump','Backdash','Weight','Unique Movement Options']
 # Normals and Other
 striveNormalsTableHeader = ['Input', ' Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'onBlock', 'onHit', 'riscGain', 'Level', 'Invuln', 'Prorate']
 # Specials and Super
 striveSpecialsTableHeader = ['Input', ' Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'onBlock', 'onHit', 'riscGain', 'Level', 'Invuln', 'Prorate']
+# Special Case
+striveSpecialCase = {
+    'Reflect_Projectile':'F.D.B.'
+}
+
 
 def findxrdFrameData(character, moveName):
     r = requests.get(f'http://www.dustloop.com/wiki/index.php?title=GGXRD-R2/{character}/Frame_Data').text
@@ -142,20 +150,60 @@ def movexrdImage(character, move):
 
 # Special case, Potemkin Reflect Projectile has no image need to omit this function.
 def moveStriveImage(character, move):
-    if move.index('.') > -1:
-        move.remove('.')
-
-    reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{character}_{move}.png').text
-    soupImg = BeautifulSoup(reqImg, 'html.parser')
-    #print(soupImg.text)
-    #findRef = soupImg.find('a', {'class':'internal'}).get('href')
-    findRef = soupImg.find('div', {'id':'file'}, {'class':'fullImageLink'}).find('a').get('href')
-    #findRef = soupImg.find_all('a',{'href':'/wiki/images/b/b6/GGST_Ky_Kiske_5K.png'})#.get('href')
-    #print(findRef)
-    imgLink = f'https://dustloop.com{findRef}'
-    return imgLink
+    try:
+        reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{character}_{move}.png').text
+        soupImg = BeautifulSoup(reqImg, 'html.parser')
+        findRef = soupImg.find('div', {'id':'file'}, {'class':'fullImageLink'}).find('a').get('href')
+        imgLink = f'https://dustloop.com{findRef}'
+        print(f'This is the link: {imgLink}')
+        return imgLink
+    except AttributeError:
+        print('Object not found')
+        return ''
     #return findRef
 
+def characterStriveImage(character):
+    print(character)
+    try:
+        reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{character}_Portrait.png').text
+        soupImg = BeautifulSoup(reqImg, 'html.parser')
+        findRef = soupImg.find('div', {'id':'file'}, {'class':'fullImageLink'}).find('a').get('href')
+        imgLink = f'https://dustloop.com{findRef}'
+        #print(f'This is the link: {imgLink}')
+        return imgLink
+    except AttributeError:
+        print('Object not found')
+        return ''
+    #return findRef
+
+
+def findStriveSystemData(character):
+    r = requests.get(f'https://dustloop.com/wiki/index.php?title=GGST/{character}/Frame_Data').text
+    soup = BeautifulSoup(r, 'html.parser')
+
+    findTable = soup.find('table', {'class':'cargoTable'})
+    #print(f'Info Table: {infoTable}')
+
+    for header in findTable.find_all('table', {'class':'headerSort'}):
+        header.decompose()
+
+    #print(infoTable.find_all('td'))
+
+    i = 0
+    infoTable = []
+    for td in findTable.find_all('td'):
+        if(findTable.find_all('td')[i].text == ''):
+            infoTable.append('None')
+        else:
+            infoTable.append(findTable.find_all('td')[i].text)
+        i+=1
+    # cargoTable noMerge sortable jquery-tablesorter
+
+    characterInfoTable = []
+    characterInfoTable.append(striveCharacterTableHeader)
+    characterInfoTable.append(infoTable)
+    
+    return characterInfoTable
 
 # Perhaps have dictionary for throw names if it's just 'throw'
 # need to do System data
@@ -271,7 +319,9 @@ def findStriveFrameData(character, moveName):
             frameData.append(normalsData[i])
             break
         i+=1
-    if len(frameData) < 2:
+    if len(frameData) <= 0:
+        i=0
+        #print(len(specialsData))
         for special in specialsData:
             if specialsData[i][0] == moveName or specialsData[i][1] == moveName:
                 frameData.append(striveSpecialsTableHeader)
@@ -283,10 +333,13 @@ def findStriveFrameData(character, moveName):
 
 
 #print(striveCharacters['ky'])
-print(moveStriveImage(striveCharacters['potemkin'],'Reflect Projectile'))
+#print(moveStriveImage(striveCharacters['potemkin'],'Reflect Projectile'))
+#print(moveStriveImage(striveCharacters['potemkin'],'c.S'))
 #print(findNormalData(xrdCharacters['ky'],'5P'))
-#print(findStriveData(striveCharacters['ky'],'236K'))
+#print(findStriveFrameData(striveCharacters['ky'],'236K'))
 #print(findStriveFrameData(striveCharacters['ky'],'c.S'))
+#print(findStriveSystemData(striveCharacters['ky']))
+#print(characterStriveImage(striveCharacters['ky']))
 
 # DataTables_Table_0 - normals1
 # DataTables_Table_1 - Specials
