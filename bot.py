@@ -76,8 +76,6 @@ async def on_message(message):
         character = command[1].lower()
         move = command[2].upper()
 
-        # URL can't use periods, so c.S and f.S need special cases
-        # Ground Throw, Airthrow, wallrun might need to have manual underscores put in.
         embed=discord.Embed(title=f'{striveCharacters[character]} {move}', url=f'https://dustloop.com/wiki/index.php?title=GGST/{striveCharacters[character]}#{move}', color=0xFF5733)
         # Have footer tell user about [] notation from dustloop, special case for certain characters.
         embed.set_footer(text='balls')
