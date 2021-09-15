@@ -62,9 +62,10 @@ striveCharacters = {
     'jacko':'Jack-O' # Name variation
 }
 
+# Table Headers not needed
 # Dust Loop Xrd Table 
 # Name, Damage, Guard, Startup, Active, Recovery, Frame Adv., Inv., RISC, Prorate, Cancel, Roman, Tension, Level, Hitbox
-xrdTableHeader = ['Name', 'Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'FrameAdv.', 'Inv.', 'RISC', 'Prorate', 'Cancel', 'Roman', 'Tension', 'Level']
+xrdTableHeader = ['Name', 'Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'FrameAdv.', 'Inv.', 'RISC', 'Prorate', 'Cancel', 'Roman', 'Tension', 'Level'] 
 outliers = ['ino', 'haehyun', 'jacko']
 
 footer = {
@@ -74,16 +75,8 @@ footer = {
     'Axl_Low':'Damage value in [] refers to max range'
 }
 
-### Headers
-# System Data
-striveCharacterTableHeader = ['Name','Defense','Guts','Prejump','Backdash','Weight','Unique Movement Options']
-# Normals and Other
-striveNormalsTableHeader = ['Input', ' Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'onBlock', 'onHit', 'riscGain', 'Level', 'Invuln', 'Prorate']
-# Specials and Super
-striveSpecialsTableHeader = ['Input', ' Damage', 'Guard', 'Startup', 'Active', 'Recovery', 'onBlock', 'onHit', 'riscGain', 'Level', 'Invuln', 'Prorate']
-# Special Case
 striveSpecialCase = {
-    'Reflect_Projectile':'F.D.B.'
+    'Reflect Projectile':'F.D.B.'
 }
 
 
@@ -149,39 +142,55 @@ def movexrdImage(character, move):
     return imgLink
 
 # Special case, Potemkin Reflect Projectile has no image need to omit this function.
+# Change to normals
 def moveStriveImage(character, move):
+    lowerCasedChar = striveCharacters[character.lower()]
+    moveRedirect = ''
+    if( len(move) > 2):
+        moves = move.split(' ')
+        i = 0
+        while i < len(moves)-1:
+            moveRedirect+= moves[i].capitalize() +'_'
+            i+=1
+        moveRedirect += moves[i].capitalize()
+    else:
+        moveRedirect = move.upper()
     try:
-        reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{character}_{move}.png').text
+        reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{lowerCasedChar}_{moveRedirect}.png').text
         soupImg = BeautifulSoup(reqImg, 'html.parser')
         findRef = soupImg.find('div', {'id':'file'}, {'class':'fullImageLink'}).find('a').get('href')
         imgLink = f'https://dustloop.com{findRef}'
-        print(f'This is the link: {imgLink}')
         return imgLink
     except AttributeError:
         print('Object not found')
         return ''
-    #return findRef
-
+# Portrait URL for embed
 def characterStriveImage(character):
-    print(character)
+    lowerCased = striveCharacters[character.lower()]
     try:
         reqImg = requests.get(f'https://dustloop.com/wiki/index.php?title=File:GGST_{character}_Portrait.png').text
         soupImg = BeautifulSoup(reqImg, 'html.parser')
         findRef = soupImg.find('div', {'id':'file'}, {'class':'fullImageLink'}).find('a').get('href')
         imgLink = f'https://dustloop.com{findRef}'
-        #print(f'This is the link: {imgLink}')
         return imgLink
     except AttributeError:
         print('Object not found')
         return ''
     #return findRef
 
-
 def findStriveSystemData(character):
-    r = requests.get(f'https://dustloop.com/wiki/index.php?title=GGST/{character}/Frame_Data').text
+    convertedChar = striveCharacters[character]
+    r = requests.get(f'https://dustloop.com/wiki/index.php?title=GGST/{convertedChar}/Frame_Data').text
     soup = BeautifulSoup(r, 'html.parser')
 
     findTable = soup.find('table', {'class':'cargoTable'})
+
+    # System Data Table Header
+    findTableHeader = findTable.find('tr').find_all('th') # Finds the header for another table if we just find 'th', I think
+    tableHeaders = []
+    for header in findTableHeader:
+        tableHeaders.append(header.text)
+    #tableHeaders.remove('')
     #print(f'Info Table: {infoTable}')
 
     for header in findTable.find_all('table', {'class':'headerSort'}):
@@ -200,23 +209,30 @@ def findStriveSystemData(character):
     # cargoTable noMerge sortable jquery-tablesorter
 
     characterInfoTable = []
-    characterInfoTable.append(striveCharacterTableHeader)
+    characterInfoTable.append(tableHeaders)
     characterInfoTable.append(infoTable)
     
     return characterInfoTable
 
-# Perhaps have dictionary for throw names if it's just 'throw'
-# need to do System data
 def findStriveFrameData(character, moveName):
-    r = requests.get(f'https://dustloop.com/wiki/index.php?title=GGST/{character}/Frame_Data').text
+
+    convertedChar = striveCharacters[character]
+    r = requests.get(f'https://dustloop.com/wiki/index.php?title=GGST/{convertedChar}/Frame_Data').text
 
     # Beautiful Soup
     soup = BeautifulSoup(r, 'html.parser')
-    #print(soup)
-    #systemData = soup.find('table', {'class':'wikitable'}).text
 
     # Normal Moves Table
     normals = soup.find('table', {'class':'cargoDynamicTable'})
+    
+    # Normals Table Header
+    findNormalsHeader = normals.find('tr').find_all('th') # Finds the header for another table if we just find 'th', I think
+    normalsHeaders = []
+    for header in findNormalsHeader:
+        normalsHeaders.append(header.text)
+    normalsHeaders.remove('')
+
+
     # Trim excess information
     for extras in normals.find_all('td', {'class':'details-control'}):
         extras.decompose()
@@ -224,21 +240,23 @@ def findStriveFrameData(character, moveName):
 
     # Specials Table
     specials = normals.find_next_sibling('table', {'class':'cargoDynamicTable'})
+
+    # Specials Table Headers
+    findSpecialsHeader = specials.find('tr').find_all('th')
+    specialsHeaders = []
+    for header in findSpecialsHeader:
+        specialsHeaders.append(header.text)
+    specialsHeaders.remove('')
+
     # Trim excess information
-    for extras in specials.find_all('td', {'class':'details-control'}):
+    for extras in specials.find_all('td', {'class':'details-control'}):    
         extras.decompose()
-
-
     # Supers Table
     supers = specials.find_next_sibling('table', {'class':'cargoDynamicTable'})
-    # Trim excess information
     for extras in supers.find_all('td', {'class':'details-control'}):
         extras.decompose()
-
-
     # Throw Table
     other = supers.find_next_sibling('table', {'class':'cargoDynamicTable'})
-    # Trim excess information
     for extras in other.find_all('td', {'class':'details-control'}):
         extras.decompose()
     
@@ -250,27 +268,22 @@ def findStriveFrameData(character, moveName):
     for td in normals.find_all('td'):
         normalsList.append(normals.find_all('td')[i].text)
         i+=1
+    # Place Other Data into normals List
+    i = 0
+    for td in other.find_all('td'):
+        normalsList.append(other.find_all('td')[i].text)
+        i+=1
 
 
-    # Place special move data into specials list
+    # Place specials/supers data into specials list
     i = 0
     specialsList = []
     for td in specials.find_all('td'):
         specialsList.append(specials.find_all('td')[i].text)
         i+=1
-
-
-    # Place supers into specials list
     i = 0
     for td in supers.find_all('td'):
         specialsList.append(supers.find_all('td')[i].text)
-        i+=1
-
-
-    # Place Other Data into list List
-    i = 0
-    for td in other.find_all('td'):
-        normalsList.append(other.find_all('td')[i].text)
         i+=1
 
 
@@ -306,42 +319,53 @@ def findStriveFrameData(character, moveName):
             move = []
             i=0
 
-    # Specials and Supers have an extra column in the data table called name, messing up with the organization
-    #['236S', 'Stun Edge', '30 [33]', 'All', '11', 'Until Hit', 'Total 54', '-17', '-14', '4', '2', 'none'], ['80%', 'DI 236S', 'Stun Edge', '30*
-    # Format Normal Data into 1 Move 
-    print(moveName)
-    #print(normalsData)
+
     i = 0
     frameData = []
     for normal in normalsData:
         if normalsData[i][0] == moveName:
-            frameData.append(striveNormalsTableHeader)
+            frameData.append(normalsHeaders)
             frameData.append(normalsData[i])
             break
         i+=1
     if len(frameData) <= 0:
         i=0
-        #print(len(specialsData))
         for special in specialsData:
-            if specialsData[i][0] == moveName or specialsData[i][1] == moveName:
-                frameData.append(striveSpecialsTableHeader)
+            ## To lower both strings to avoid not printing.
+            if specialsData[i][0].lower() == moveName.lower() or specialsData[i][1].lower() == moveName.lower():
+                frameData.append(specialsHeaders)
                 frameData.append(specialsData[i])
                 break
             i+=1
+ 
     return frameData
 
+def embedStriveTitle(character, move):
+    temp = striveCharacters[character]
+    try:
+        underscore = temp.index('_')
+        temp = f'{temp[0:underscore]} {temp[underscore+1:]} {move}'
+    except ValueError:
+        temp = f'{temp} {move}'
+    return temp
+    
 
-
-#print(striveCharacters['ky'])
-#print(moveStriveImage(striveCharacters['potemkin'],'Reflect Projectile'))
-#print(moveStriveImage(striveCharacters['potemkin'],'c.S'))
-#print(findNormalData(xrdCharacters['ky'],'5P'))
-#print(findStriveFrameData(striveCharacters['ky'],'236K'))
-#print(findStriveFrameData(striveCharacters['ky'],'c.S'))
-#print(findStriveSystemData(striveCharacters['ky']))
-#print(characterStriveImage(striveCharacters['ky']))
-
-# DataTables_Table_0 - normals1
-# DataTables_Table_1 - Specials
-# DataTables_Table_2 - supers
-# DataTables_Table_3 - other
+def embedStriveUrl(character, move):
+    moveRedirect = move
+    try:
+        if move.index(' '):
+            moveRedirect=''
+            # For abnormal moves in the table, ex. Reflect Projectile in Potemkin's Table
+            try:
+                moveRedirect = striveSpecialCase[move]
+            except KeyError:
+                moves = move.split(' ')
+                i = 0
+                while i < len(moves)-1:
+                    moveRedirect+= moves[i].capitalize() +'_'
+                    i+=1
+                moveRedirect += moves[i].capitalize()
+    except ValueError:
+        print()
+    url = f'https://dustloop.com/wiki/index.php?title=GGST/{striveCharacters[character]}#{moveRedirect}'
+    return url
